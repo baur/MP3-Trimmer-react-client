@@ -45,6 +45,14 @@ html, body {
   animation: pulse 1.5s infinite;
 }
 
+.status {
+  text-align: center;
+  font-size: 16px;
+  color: #4f46e5;
+  animation: pulse 1.5s infinite;
+}
+
+
 .error {
   text-align: center;
   color: red;

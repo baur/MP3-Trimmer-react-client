@@ -227,7 +227,9 @@ const Player = () => {
     <>
       {isLoading ? (
         <>
-          <div className="loading">Загрузка... {loadingPercent}%</div>
+          {loadingPercent > 0 && loadingPercent < 100 ? (
+            <div className="loading">Загрузка... {loadingPercent}%</div>
+          ) : null}
           <div className="status">{status}</div>
         </>
       ) : null}
@@ -240,12 +242,19 @@ const Player = () => {
           waveColor="#ddd"
           url={fileURL}
           onError={onError}
+          onDecode={(ws,duration) => {
+            updateStatus("Декодирование завершено: "+duration);
+          }}
           onReady={onReady}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onTimeupdate={onTimeUpdate}
           onLoading={(wavesurfer, percent) => {
             setLoadingPercent(percent);
+
+            if (percent === 100) {
+              updateStatus("Идет декодирование...");
+            }
           }}
           plugins={useMemo(
             () => [

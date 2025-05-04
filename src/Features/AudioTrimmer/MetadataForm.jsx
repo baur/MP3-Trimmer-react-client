@@ -4,10 +4,9 @@ import { updateMetadata } from "../../regionSlice";
 import PresetModal from "./PresetModal";
 import axios from "axios";
 
-const MetadataForm = ({file}) => {
-  
+const MetadataForm = () => {
   const dispatch = useDispatch();
-  const { start, end, metadata } = useSelector((state) => state.region);
+  const { start, end, metadata, audio } = useSelector((state) => state.region);
   const [cover, setCover] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPresetSelected, setIsPresetSelected] = useState(false);
@@ -18,29 +17,25 @@ const MetadataForm = ({file}) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) return alert("Выберите файл");
-    if (end <= start)
-      return alert("Конечное время должно быть больше начального");
+    if (!audio.url) return alert("Выберите файл");
+    if (end <= start) return alert("Конечное время должно быть больше начального");
     if (!cover) return alert("Выберите обложку!");
 
+    const guid = audio.url.split("/").pop(); // Извлекаем GUID из URL
     const formData = new FormData();
-    formData.append("audio", file);
+    formData.append("guid", guid);
     formData.append("start", start);
     formData.append("end", end);
     formData.append("title", metadata.title);
     formData.append("artist", metadata.artist);
     formData.append("album", metadata.album);
     formData.append("publisher", metadata.publisher);
-    if (cover) {
-      formData.append("cover", cover);
-    }
+    if (cover) formData.append("cover", cover);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/trim",
-        formData,
-        { responseType: "blob" }
-      );
+      const response = await axios.post("http://localhost:5000/trim", formData, {
+        responseType: "blob",
+      });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -50,13 +45,11 @@ const MetadataForm = ({file}) => {
       link.remove();
     } catch (error) {
       console.error("Ошибка Axios:", error);
-      alert(
-        "Ошибка обработки аудио: " + (error.response?.data || error.message)
-      );
+      alert("Ошибка обработки: " + (error.response?.data || error.message));
     }
   };
 
-  if (!file) return null;
+  if (!audio.url) return null;
 
   return (
     <div className="text-gray-800 p-6 container">
@@ -71,7 +64,6 @@ const MetadataForm = ({file}) => {
               className="input w-full"
             />
           </div>
-
           <div>
             <label className="block font-semibold mb-2">Исполнитель:</label>
             <input
@@ -81,7 +73,6 @@ const MetadataForm = ({file}) => {
               className="input w-full"
             />
           </div>
-
           <div>
             <label className="block font-semibold mb-2">Альбом:</label>
             <input
@@ -91,7 +82,6 @@ const MetadataForm = ({file}) => {
               className="input w-full"
             />
           </div>
-
           <div>
             <label className="block font-semibold mb-2">Издатель:</label>
             <input
@@ -101,7 +91,6 @@ const MetadataForm = ({file}) => {
               className="input w-full"
             />
           </div>
-
           <div>
             <label className="block font-semibold mb-2">Обложка:</label>
             {!isPresetSelected && (
@@ -115,7 +104,6 @@ const MetadataForm = ({file}) => {
                 className="input w-full"
               />
             )}
-
             {cover && (
               <div className="mt-4 text-center">
                 <p className="font-semibold mb-2">Предпросмотр обложки:</p>
@@ -129,7 +117,6 @@ const MetadataForm = ({file}) => {
               </div>
             )}
           </div>
-
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
@@ -137,13 +124,11 @@ const MetadataForm = ({file}) => {
           >
             Выбрать пресет
           </button>
-
           <button type="submit" className="btn-primary w-full">
             Обрезать и тегировать
           </button>
         </form>
       </div>
-
       {isModalOpen && (
         <PresetModal
           setCover={setCover}
