@@ -1,8 +1,6 @@
-import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { adjustStart, adjustEnd } from "../../regionSlice";
 import WavesurferPlayer from "./Player";
-
 
 const TimingAndPlayer = () => {
   const fileURL = useSelector((state) => state.region.audio.url);
@@ -12,10 +10,10 @@ const TimingAndPlayer = () => {
   const increaseStart = () => dispatch(adjustStart(1));
   const decreaseEnd = () => dispatch(adjustEnd(-1));
   const increaseEnd = () => dispatch(adjustEnd(1));
-  const decreaseStartMs = () => dispatch(adjustStart(-0.1));
-  const increaseStartMs = () => dispatch(adjustStart(0.1));
-  const decreaseEndMs = () => dispatch(adjustEnd(-0.1));
-  const increaseEndMs = () => dispatch(adjustEnd(0.1));
+  const decreaseStartMs = () => dispatch(adjustStart(-0.05));
+  const increaseStartMs = () => dispatch(adjustStart(0.05));
+  const decreaseEndMs = () => dispatch(adjustEnd(-0.05));
+  const increaseEndMs = () => dispatch(adjustEnd(0.05));
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -44,7 +42,7 @@ const TimingAndPlayer = () => {
               -1 сек
             </button>
             <button type="button" onClick={decreaseStartMs} className="btn">
-              -100 мс
+              -50 мс
             </button>
             <input
               type="text"
@@ -54,7 +52,7 @@ const TimingAndPlayer = () => {
               className="input w-28 text-center"
             />
             <button type="button" onClick={increaseStartMs} className="btn">
-              +100 мс
+              +50 мс
             </button>
             <button type="button" onClick={increaseStart} className="btn">
               +1 сек
@@ -71,7 +69,7 @@ const TimingAndPlayer = () => {
               -1 сек
             </button>
             <button type="button" onClick={decreaseEndMs} className="btn">
-              -100 мс
+              -50 мс
             </button>
             <input
               type="text"
@@ -81,7 +79,7 @@ const TimingAndPlayer = () => {
               className="input w-28 text-center"
             />
             <button type="button" onClick={increaseEndMs} className="btn">
-              +100 мс
+              +50 мс
             </button>
             <button type="button" onClick={increaseEnd} className="btn">
               +1 сек

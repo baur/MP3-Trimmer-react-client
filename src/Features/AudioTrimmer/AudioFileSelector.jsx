@@ -18,7 +18,8 @@ const AudioFileSelector = ({ onSelect }) => {
     formData.append('audio', file);
 
     try {
-      const response = await axios.post('http://localhost:5000/upload', formData);
+      const response = await axios.post(`${import.meta.env.VITE_API_PATH}/upload`, formData);
+      console.log('Файл успешно загружен:', response.data);
       const { url } = response.data;
       dispatch(setAudio({ name: file.name, url }));
       onSelect(file);

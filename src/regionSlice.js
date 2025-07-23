@@ -24,11 +24,11 @@ const regionSlice = createSlice({
     adjustStart: (state, action) => {
       state.start = Math.max(0, state.start + action.payload);
       if (state.end <= state.start) {
-        state.end = state.start + 0.1;
+        state.end = state.start + 0.05;
       }
     },
     adjustEnd: (state, action) => {
-      state.end = Math.max(state.start + 0.1, state.end + action.payload);
+      state.end = Math.max(state.start + 0.05, state.end + action.payload);
     },
 
     updateMetadata: (state, action) => {

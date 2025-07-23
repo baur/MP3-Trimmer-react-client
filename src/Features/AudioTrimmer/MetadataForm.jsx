@@ -32,18 +32,31 @@ const MetadataForm = () => {
     formData.append("publisher", metadata.publisher);
     if (cover) formData.append("cover", cover);
 
-    try {
-      const response = await axios.post("http://localhost:5000/trim", formData, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "trimmed.mp3");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
+try {
+  const response = await axios.post(`${import.meta.env.VITE_API_PATH}/trim`, formData, {
+    responseType: "blob",
+  });
+  
+  // Попытаться получить имя файла из заголовка Content-Disposition
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = `${metadata.title || 'untitled'}.mp3`;
+  
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+    if (filenameMatch) {
+      filename = filenameMatch[1];
+    }
+  }
+  
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  } catch (error) {
       console.error("Ошибка Axios:", error);
       alert("Ошибка обработки: " + (error.response?.data || error.message));
     }

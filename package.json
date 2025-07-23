@@ -15,14 +15,14 @@
     "@mui/material": "^7.0.2",
     "@reduxjs/toolkit": "^2.7.0",
     "@tailwindcss/vite": "^4.1.4",
-    "@wavesurfer/react": "^1.0.11",
     "axios": "^1.9.0",
-    "flyonui": "^2.1.0",
+    "lodash": "^4.17.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-input-mask": "^2.0.4",
     "react-redux": "^9.2.0",
-    "tailwindcss": "^4.1.4"
+    "tailwindcss": "^4.1.4",
+    "wavesurfer.js": "^7.9.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
