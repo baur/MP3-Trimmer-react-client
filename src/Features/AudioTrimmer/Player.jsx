@@ -454,56 +454,65 @@ const Player = () => {
             {formatTime(regionRef.current ? regionRef.current.start : start)} -{" "}
             {formatTime(regionRef.current ? regionRef.current.end : end)}
           </p>
-          <button className="btn mr-2" onClick={onPlayPause}>
+          <button className="btn" onClick={onPlayPause}>
             {isPlaying ? "Pause" : "Play"}
           </button>
           {/* <button className="btn mr-2" onClick={selectAll}>
             Выбрать всё
           </button> */}
-          <button className="btn mr-2" onClick={resetZoom}>
-            Сбросить зум
-          </button>
-          <div style={{ marginTop: "10px" }}>
-            <label>Зум: {Math.round(zoomLevel)} px/sec </label>
-            <button
-              type="button"
-              className="btn mr-2"
-              onClick={() => setIsZoomLocked((locked) => !locked)}
-              style={{ marginLeft: "10px" }}
-            >
-              {isZoomLocked ? "Разблокировать зум" : "Блокировать зум"}
-            </button>
-            <div
-              className="inline-flex rounded border border-blue-500 overflow-hidden"
-              style={{ marginLeft: "10px" }}
-            >
-              {Object.entries(ZOOM_MODES).map(([mode, config]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => handleZoomModeChange(mode)}
-                  disabled={isZoomLocked}
-                  className={`px-3 py-1 transition ${
-                    zoomMode === mode
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-blue-600 hover:bg-blue-50"
-                  }`}
-                >
-                  {config.label}
-                </button>
-              ))}
+          <section className="mt-4 w-full rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+            <h3 className="mb-3 text-center text-base font-semibold text-blue-900">
+              Зум
+            </h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+              <div className="w-full text-center font-medium text-blue-900 sm:w-auto sm:text-left">
+                {Math.round(zoomLevel)} px/sec
+              </div>
+              <button
+                type="button"
+                className="btn w-full sm:w-auto"
+                onClick={resetZoom}
+              >
+                Сбросить зум
+              </button>
+              <button
+                type="button"
+                className="btn w-full sm:w-auto"
+                onClick={() => setIsZoomLocked((locked) => !locked)}
+              >
+                {isZoomLocked ? "Разблокировать зум" : "Блокировать зум"}
+              </button>
+              <div
+                className="grid w-full grid-cols-3 overflow-hidden rounded border border-blue-500 sm:w-auto"
+              >
+                {Object.entries(ZOOM_MODES).map(([mode, config]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleZoomModeChange(mode)}
+                    disabled={isZoomLocked}
+                    className={`px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      zoomMode === mode
+                        ? "bg-blue-500 text-white"
+                        : "bg-white text-blue-600 hover:bg-blue-50"
+                    }`}
+                  >
+                    {config.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={zoomMax}
+                step="0.1"
+                value={zoomLevel}
+                onChange={handleZoom}
+                disabled={isZoomLocked}
+                className="w-full accent-blue-500 sm:max-w-xs"
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max={zoomMax}
-              step="0.1"
-              value={zoomLevel}
-              onChange={handleZoom}
-              disabled={isZoomLocked}
-              style={{ width: "200px", marginLeft: "10px" }}
-            />
-          </div>
+          </section>
         </>
       ) : null}
     </>
