@@ -9,12 +9,13 @@ const TimingAndPlayer = () => {
   const { start, end } = useSelector((state) => state.region);
   const [activeBoundary, setActiveBoundary] = useState("start");
   const [stepValue, setStepValue] = useState(1);
+  const [stepUnit, setStepUnit] = useState("seconds");
 
   const isEditingStart = activeBoundary === "start";
   const activeLabel = isEditingStart ? "Начало (сек)" : "Конец (сек)";
   const activeTime = isEditingStart ? start : end;
-  const stepInSeconds = stepValue;
-  const stepInMilliseconds = stepValue / 1000;
+  const stepUnitLabel = stepUnit === "milliseconds" ? "мс" : "сек";
+  const stepAmount = stepUnit === "milliseconds" ? stepValue / 1000 : stepValue;
   const adjustActiveBoundary = (amount) => {
     dispatch(isEditingStart ? adjustStart(amount) : adjustEnd(amount));
   };
@@ -67,8 +68,32 @@ const TimingAndPlayer = () => {
           </div>
 
           <div className="w-full max-w-md flex flex-col items-center gap-2">
+            <div className="grid w-full max-w-xs grid-cols-2 overflow-hidden rounded border border-blue-500">
+              <button
+                type="button"
+                onClick={() => setStepUnit("milliseconds")}
+                className={`px-4 py-2 transition ${
+                  stepUnit === "milliseconds"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-blue-600 hover:bg-blue-50"
+                }`}
+              >
+                мс
+              </button>
+              <button
+                type="button"
+                onClick={() => setStepUnit("seconds")}
+                className={`px-4 py-2 transition ${
+                  stepUnit === "seconds"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-blue-600 hover:bg-blue-50"
+                }`}
+              >
+                сек
+              </button>
+            </div>
             <label className="block font-semibold text-center w-full text-blue-900">
-              Шаг: {stepValue} мс / {stepValue} сек
+              Шаг: {stepValue} {stepUnitLabel}
             </label>
             <input
               type="range"
@@ -85,41 +110,27 @@ const TimingAndPlayer = () => {
             <label className="block font-semibold mb-2 text-center w-full text-blue-900">
               {activeLabel}:
             </label>
-            <div className="grid w-full max-w-xl grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:justify-center">
+            <div className="grid w-full max-w-xl grid-cols-[minmax(72px,1fr)_minmax(132px,1.35fr)_minmax(72px,1fr)] items-center gap-2">
               <button
                 type="button"
-                onClick={() => adjustActiveBoundary(-stepInSeconds)}
-                className="btn w-full sm:w-auto"
+                onClick={() => adjustActiveBoundary(-stepAmount)}
+                className="btn w-full"
               >
-                -{stepValue} сек
-              </button>
-              <button
-                type="button"
-                onClick={() => adjustActiveBoundary(-stepInMilliseconds)}
-                className="btn w-full sm:w-auto"
-              >
-                -{stepValue} мс
+                -{stepValue} {stepUnitLabel}
               </button>
               <input
                 type="text"
                 value={formatTime(activeTime)}
                 readOnly
                 step="0.1"
-                className="input col-span-2 w-full text-center sm:w-32"
+                className="input w-full min-w-0 text-center"
               />
               <button
                 type="button"
-                onClick={() => adjustActiveBoundary(stepInMilliseconds)}
-                className="btn w-full sm:w-auto"
+                onClick={() => adjustActiveBoundary(stepAmount)}
+                className="btn w-full"
               >
-                +{stepValue} мс
-              </button>
-              <button
-                type="button"
-                onClick={() => adjustActiveBoundary(stepInSeconds)}
-                className="btn w-full sm:w-auto"
-              >
-                +{stepValue} сек
+                +{stepValue} {stepUnitLabel}
               </button>
             </div>
           </div>

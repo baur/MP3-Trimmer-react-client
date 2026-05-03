@@ -59,8 +59,12 @@ const Player = () => {
 
   const getActualRegionBounds = useCallback(() => {
     return {
-      start: regionRef.current ? regionRef.current.start : reduxRegionRef.current.start,
-      end: regionRef.current ? regionRef.current.end : reduxRegionRef.current.end,
+      start: regionRef.current
+        ? regionRef.current.start
+        : reduxRegionRef.current.start,
+      end: regionRef.current
+        ? regionRef.current.end
+        : reduxRegionRef.current.end,
     };
   }, []);
 
@@ -87,9 +91,10 @@ const Player = () => {
 
   // Инициализация WaveSurfer
   useEffect(() => {
-
-  console.log("=== useEffect STARTED ===", { fileURL, hasRef: !!waveformRef.current });
-
+    console.log("=== useEffect STARTED ===", {
+      fileURL,
+      hasRef: !!waveformRef.current,
+    });
 
     if (!fileURL || !waveformRef.current) return;
 
@@ -148,14 +153,12 @@ const Player = () => {
       hideScrollbar: true,
       normalize: false,
       backend: "WebAudio",
-      //  backend: "MediaElement", 
+      //  backend: "MediaElement",
       responsive: true,
       fillParent: true,
       // barWidth: 2, // Добавьте - уменьшает детализацию
       // barGap: 1, // Добавьте
       // minPxPerSec: 1, // Добавьте - начальный зум для больших файлов
-
-
     });
 
     // Обработчики событий
@@ -163,7 +166,7 @@ const Player = () => {
       setLoadingPercent(percent);
       if (percent === 100) {
         updateStatus(
-          "Идет декодирование... (может занять время для больших файлов)"
+          "Идет декодирование... (может занять время для больших файлов)",
         );
       }
     });
@@ -209,7 +212,7 @@ const Player = () => {
         updateRegion({
           start: startTime,
           end: endTime,
-        })
+        }),
       );
 
       // Отслеживаем ручное изменение региона
@@ -231,7 +234,7 @@ const Player = () => {
           updateRegion({
             start: region.start,
             end: region.end,
-          })
+          }),
         );
       });
 
@@ -303,7 +306,12 @@ const Player = () => {
 
   // Синхронизация региона с Redux
   useEffect(() => {
-      console.log("=== Sync region useEffect ===", { start, end, hasWavesurfer: !!wavesurfer, isDragging: isDraggingRef.current });
+    console.log("=== Sync region useEffect ===", {
+      start,
+      end,
+      hasWavesurfer: !!wavesurfer,
+      isDragging: isDraggingRef.current,
+    });
 
     if (
       regionRef.current &&
@@ -311,24 +319,13 @@ const Player = () => {
       !isDraggingRef.current &&
       (start !== regionRef.current?.start || end !== regionRef.current?.end)
     ) {
-      regionRef.current.start = start || 2;
-      regionRef.current.end = end || 5;
-      // Обновляем отображение региона
-      const duration = wavesurfer.getDuration();
-      if (duration) {
-        regionRef.current.element.style.left = `${
-          (regionRef.current.start / duration) * 100
-        }%`;
-        regionRef.current.element.style.width = `${
-          ((regionRef.current.end - regionRef.current.start) / duration) * 100
-        }%`;
-      }
+      regionRef.current.setOptions({ start, end });
     }
   }, [start, end, wavesurfer]);
 
   // Cleanup для fileURL
   useEffect(() => {
-      console.log("=== Cleanup fileURL useEffect ===", { fileURL });
+    console.log("=== Cleanup fileURL useEffect ===", { fileURL });
 
     console.log("fileURL from Redux:", fileURL);
     return () => {
@@ -368,6 +365,21 @@ const Player = () => {
     }
   };
 
+  const selectAll = () => {
+    if (!wavesurfer || !regionRef.current) return;
+
+    const duration = wavesurfer.getDuration();
+    if (!duration) return;
+
+    const nextRegion = {
+      start: 0,
+      end: duration,
+    };
+
+    regionRef.current.setOptions(nextRegion);
+    dispatch(updateRegion(nextRegion));
+  };
+
   // const handleZoom = (e) => {
   //   const minPxPerSec = e.target.valueAsNumber;
   //   if (wavesurfer) {
@@ -386,13 +398,14 @@ const Player = () => {
   // );
 
   const handleZoom = useMemo(
-    () => throttle((e) => {
-      const minPxPerSec = e.target.valueAsNumber;
-      if (wavesurfer) {
-        wavesurfer.zoom(minPxPerSec);
-      }
-    }, 50), // Задержка 50мс для плавности
-    [wavesurfer]
+    () =>
+      throttle((e) => {
+        const minPxPerSec = e.target.valueAsNumber;
+        if (wavesurfer) {
+          wavesurfer.zoom(minPxPerSec);
+        }
+      }, 50), // Задержка 50мс для плавности
+    [wavesurfer],
   );
 
   const handleZoomModeChange = (mode) => {
@@ -419,6 +432,10 @@ const Player = () => {
     }
   };
 
+  const regionStart = regionRef.current ? regionRef.current.start : start;
+  const regionEnd = regionRef.current ? regionRef.current.end : end;
+  const regionLength = regionEnd - regionStart;
+
   return (
     <>
       {isLoading ? (
@@ -432,34 +449,66 @@ const Player = () => {
 
       {error ? <div className="error">{error}</div> : null}
 
-      {fileURL ? (
-        <div ref={waveformRef} style={{ width: "100%" }} />
-      ) : (
-        <p>Файл не загружен</p>
-      )}
+      <section className="w-full rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+        {/* <h3 className="mb-3 text-center text-base font-semibold text-blue-900">
+          Диаграмма
+        </h3> */}
+        {fileURL ? (
+          <div className="rounded border border-blue-100 bg-white p-3">
+            <div ref={waveformRef} className="w-full" />
+          </div>
+        ) : (
+          <p className="text-center font-semibold text-red-500">
+            Файл не загружен
+          </p>
+        )}
+
+        {!isLoading ? (
+          <div className="mt-4 flex flex-col gap-4">
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+              <button className="btn w-full sm:w-auto" onClick={onPlayPause}>
+                {isPlaying ? "Пауза" : "Воспроизвести"}
+              </button>
+              <button className="btn w-full sm:w-auto" onClick={selectAll}>
+                Выбрать всё
+              </button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded border border-blue-100 bg-white p-3 text-center">
+                <div className="text-sm font-semibold text-blue-900">
+                  Текущее время
+                </div>
+                <div className="mt-1 font-mono text-sm text-blue-700 sm:text-base">
+                  {formatTime(currentTime)}
+                </div>
+              </div>
+              <div className="rounded border border-blue-100 bg-white p-3 text-center">
+                <div className="text-sm font-semibold text-blue-900">
+                  Длина отрезка
+                </div>
+                <div className="mt-1 font-mono text-sm text-blue-700 sm:text-base">
+                  {formatTime(regionLength)}
+                </div>
+              </div>
+              <div className="rounded border border-blue-100 bg-white p-3 text-center">
+                <div className="text-sm font-semibold text-blue-900">
+                  Регион
+                </div>
+                <div className="mt-1 break-words font-mono text-sm text-blue-700 sm:text-base">
+                  {formatTime(regionStart)} - {formatTime(regionEnd)}
+                </div>
+              </div>
+            </div>
+
+
+          </div>
+        ) : null}
+      </section>
 
       {!isLoading ? (
         <>
-          <p>Текущее время: {formatTime(currentTime)}</p>
-          <p>
-            Длина отрезка:{" "}
-            {formatTime(
-              regionRef.current
-                ? regionRef.current.end - regionRef.current.start
-                : end - start
-            )}
-          </p>
-          <p>
-            Регион:{" "}
-            {formatTime(regionRef.current ? regionRef.current.start : start)} -{" "}
-            {formatTime(regionRef.current ? regionRef.current.end : end)}
-          </p>
-          <button className="btn" onClick={onPlayPause}>
-            {isPlaying ? "Pause" : "Play"}
-          </button>
-          {/* <button className="btn mr-2" onClick={selectAll}>
-            Выбрать всё
-          </button> */}
           <section className="mt-4 w-full rounded-lg border border-blue-100 bg-blue-50/40 p-4">
             <h3 className="mb-3 text-center text-base font-semibold text-blue-900">
               Зум
@@ -471,20 +520,11 @@ const Player = () => {
               <button
                 type="button"
                 className="btn w-full sm:w-auto"
-                onClick={resetZoom}
-              >
-                Сбросить зум
-              </button>
-              <button
-                type="button"
-                className="btn w-full sm:w-auto"
                 onClick={() => setIsZoomLocked((locked) => !locked)}
               >
                 {isZoomLocked ? "Разблокировать зум" : "Блокировать зум"}
               </button>
-              <div
-                className="grid w-full grid-cols-3 overflow-hidden rounded border border-blue-500 sm:w-auto"
-              >
+              <div className="grid w-full grid-cols-3 overflow-hidden rounded border border-blue-500 sm:w-auto">
                 {Object.entries(ZOOM_MODES).map(([mode, config]) => (
                   <button
                     key={mode}
@@ -511,6 +551,13 @@ const Player = () => {
                 disabled={isZoomLocked}
                 className="w-full accent-blue-500 sm:max-w-xs"
               />
+              <button
+                type="button"
+                className="btn w-full sm:w-auto"
+                onClick={resetZoom}
+              >
+                Сбросить зум
+              </button>
             </div>
           </section>
         </>

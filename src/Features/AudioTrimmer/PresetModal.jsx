@@ -12,22 +12,22 @@ const presets = [
     },
     cover: "/covers/cover1.jpg",
   },
-  {
-    metadata: {
-      artist: "Шейх Мухаммад аль-Хасан",
-      album: "Духовные наставления",
-      publisher: "islam.click",
-    },
-    cover: "/covers/cover2.jpg",
-  },
-  {
-    metadata: {
-      artist: "Шейх Абдулла аль-Бухари",
-      album: "Исламские лекции",
-      publisher: "islam.click",
-    },
-    cover: "/covers/cover3.jpg",
-  },
+  // {
+  //   metadata: {
+  //     artist: "Шейх Мухаммад аль-Хасан",
+  //     album: "Духовные наставления",
+  //     publisher: "islam.click",
+  //   },
+  //   cover: "/covers/cover2.jpg",
+  // },
+  // {
+  //   metadata: {
+  //     artist: "Шейх Абдулла аль-Бухари",
+  //     album: "Исламские лекции",
+  //     publisher: "islam.click",
+  //   },
+  //   cover: "/covers/cover3.jpg",
+  // },
 ];
 
 const PresetModal = ({ setCover, setIsPresetSelected, closeModal }) => {
