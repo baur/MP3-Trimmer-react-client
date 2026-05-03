@@ -319,7 +319,13 @@ const Player = () => {
       !isDraggingRef.current &&
       (start !== regionRef.current?.start || end !== regionRef.current?.end)
     ) {
-      regionRef.current.setOptions({ start, end });
+      if (typeof regionRef.current.update === "function") {
+        regionRef.current.update({ start, end });
+      } else {
+        regionRef.current.setOptions({ start, end });
+      }
+
+      updateRegionVisual(regionRef.current, wavesurfer.getDuration());
     }
   }, [start, end, wavesurfer]);
 
@@ -335,6 +341,13 @@ const Player = () => {
       }
     };
   }, [fileURL]);
+
+  const updateRegionVisual = (region, duration) => {
+    if (!region?.element || !duration) return;
+
+    region.element.style.left = `${(region.start / duration) * 100}%`;
+    region.element.style.width = `${((region.end - region.start) / duration) * 100}%`;
+  };
 
   const onPlayPause = () => {
     if (!wavesurfer) return;
@@ -366,18 +379,17 @@ const Player = () => {
   };
 
   const selectAll = () => {
-    if (!wavesurfer || !regionRef.current) return;
+    if (!wavesurfer) return;
 
     const duration = wavesurfer.getDuration();
     if (!duration) return;
 
-    const nextRegion = {
-      start: 0,
-      end: duration,
-    };
-
-    regionRef.current.setOptions(nextRegion);
-    dispatch(updateRegion(nextRegion));
+    dispatch(
+      updateRegion({
+        start: 0,
+        end: duration,
+      }),
+    );
   };
 
   // const handleZoom = (e) => {
