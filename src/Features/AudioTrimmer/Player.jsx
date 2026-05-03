@@ -1,34 +1,49 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import WaveSurfer from "wavesurfer.js";
 import Timeline from "wavesurfer.js/dist/plugins/timeline.esm.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import ZoomPlugin from "wavesurfer.js/dist/plugins/zoom.esm.js";
 import { updateRegion } from "../../regionSlice";
 import { useDispatch, useSelector } from "react-redux";
-import {  useCallback } from "react";
-import throttle from 'lodash/throttle';
+import { useCallback } from "react";
+import throttle from "lodash/throttle";
 
 const Player = () => {
   const dispatch = useDispatch();
   const { start, end } = useSelector((state) => state.region);
   const fileURL = useSelector((state) => state.region.audio.url);
-  
+
   const [loadingPercent, setLoadingPercent] = useState(0);
   const [status, setStatus] = useState("");
   const [wavesurfer, setWavesurfer] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [duration, setDuration] = useState(0);
   const [error, setError] = useState(null);
-  
+
   const [zoomLevel, setZoomLevel] = useState(0);
-  
+
   const waveformRef = useRef(null);
   const regionRef = useRef(null);
+  const reduxRegionRef = useRef({ start, end });
   const isDraggingRef = useRef(false);
   const isPlayingRef = useRef(false);
   const shouldStopAtEndRef = useRef(false); // Флаг для контроля остановки
+
+  useEffect(() => {
+    reduxRegionRef.current = { start, end };
+  }, [start, end]);
+
+  const getActualRegionBounds = useCallback(() => {
+    return {
+      start: regionRef.current ? regionRef.current.start : reduxRegionRef.current.start,
+      end: regionRef.current ? regionRef.current.end : reduxRegionRef.current.end,
+    };
+  }, []);
+
+  const isTimeInsideRegion = useCallback((time, regionStart, regionEnd) => {
+    return time >= regionStart && time < regionEnd;
+  }, []);
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -49,6 +64,10 @@ const Player = () => {
 
   // Инициализация WaveSurfer
   useEffect(() => {
+
+  console.log("=== useEffect STARTED ===", { fileURL, hasRef: !!waveformRef.current });
+
+
     if (!fileURL || !waveformRef.current) return;
 
     updateStatus("Инициализация Wavesurfer...");
@@ -86,16 +105,24 @@ const Player = () => {
       interact: true,
       hideScrollbar: true,
       normalize: false,
-      backend: 'WebAudio',
+      backend: "WebAudio",
+      //  backend: "MediaElement", 
       responsive: true,
       fillParent: true,
+      // barWidth: 2, // Добавьте - уменьшает детализацию
+      // barGap: 1, // Добавьте
+      // minPxPerSec: 1, // Добавьте - начальный зум для больших файлов
+
+
     });
 
     // Обработчики событий
     ws.on("loading", (percent) => {
       setLoadingPercent(percent);
       if (percent === 100) {
-        updateStatus("Идет декодирование...");
+        updateStatus(
+          "Идет декодирование... (может занять время для больших файлов)"
+        );
       }
     });
 
@@ -112,8 +139,7 @@ const Player = () => {
 
       updateStatus("Получение длительности аудио...");
       const audioDuration = ws.getDuration();
-      setDuration(audioDuration);
-      
+
       updateStatus("Создание региона...");
       const regionLength = 60;
       let startTime, endTime;
@@ -135,7 +161,7 @@ const Player = () => {
       });
 
       regionRef.current = region;
-      
+
       updateStatus("Обновление Redux...");
       dispatch(
         updateRegion({
@@ -166,7 +192,7 @@ const Player = () => {
           })
         );
       });
-      
+
       updateStatus("Готово!");
     });
 
@@ -174,7 +200,7 @@ const Player = () => {
       setIsPlaying(true);
       isPlayingRef.current = true;
     });
-    
+
     ws.on("pause", () => {
       setIsPlaying(false);
       isPlayingRef.current = false;
@@ -182,15 +208,31 @@ const Player = () => {
 
     ws.on("timeupdate", (currentTime) => {
       setCurrentTime(currentTime);
-      
+
       // Получаем актуальные границы региона из WaveSurfer, а не из Redux
-      const actualRegionEnd = regionRef.current ? regionRef.current.end : end;
-      
+      const { end: actualRegionEnd } = getActualRegionBounds();
+
       // Останавливаем воспроизведение только когда достигли конца региона
       // И только если включен флаг остановки
-      if (shouldStopAtEndRef.current && isPlayingRef.current && currentTime >= actualRegionEnd) {
+      if (
+        shouldStopAtEndRef.current &&
+        isPlayingRef.current &&
+        currentTime >= actualRegionEnd
+      ) {
         ws.pause();
         shouldStopAtEndRef.current = false; // Сбрасываем флаг
+      }
+    });
+
+    ws.on("interaction", (newTime) => {
+      const { start: actualStart, end: actualEnd } = getActualRegionBounds();
+
+      if (
+        isPlayingRef.current &&
+        !isTimeInsideRegion(newTime, actualStart, actualEnd)
+      ) {
+        shouldStopAtEndRef.current = true;
+        ws.play(actualStart, actualEnd);
       }
     });
 
@@ -215,10 +257,12 @@ const Player = () => {
         ws.destroy();
       }
     };
-  }, [fileURL]);
+  }, [fileURL, dispatch, getActualRegionBounds, isTimeInsideRegion]);
 
   // Синхронизация региона с Redux
   useEffect(() => {
+      console.log("=== Sync region useEffect ===", { start, end, hasWavesurfer: !!wavesurfer, isDragging: isDraggingRef.current });
+
     if (
       regionRef.current &&
       wavesurfer &&
@@ -242,6 +286,8 @@ const Player = () => {
 
   // Cleanup для fileURL
   useEffect(() => {
+      console.log("=== Cleanup fileURL useEffect ===", { fileURL });
+
     console.log("fileURL from Redux:", fileURL);
     return () => {
       if (fileURL) {
@@ -251,20 +297,9 @@ const Player = () => {
     };
   }, [fileURL]);
 
-  const selectAll = () => {
-    console.log("selectAll");
-    if (!wavesurfer) return;
-    dispatch(
-      updateRegion({
-        start: 0,
-        end: duration,
-      })
-    );
-  };
-
   const onPlayPause = () => {
     if (!wavesurfer) return;
-    
+
     if (isPlaying) {
       // Если играет - просто ставим на паузу
       wavesurfer.pause();
@@ -273,33 +308,21 @@ const Player = () => {
     }
 
     const current = wavesurfer.getCurrentTime();
-    const totalDuration = wavesurfer.getDuration();
-    
-    // Получаем актуальные границы региона из WaveSurfer
-    const actualStart = regionRef.current ? regionRef.current.start : start;
-    const actualEnd = regionRef.current ? regionRef.current.end : end;
-    
+
+    const { start: actualStart, end: actualEnd } = getActualRegionBounds();
+
     // Проверяем, находится ли курсор внутри региона
-    const isInsideRegion = current >= actualStart && current < actualEnd;
-    
+    const isInsideRegion = isTimeInsideRegion(current, actualStart, actualEnd);
+
     // Устанавливаем флаг остановки в конце региона
     shouldStopAtEndRef.current = true;
-    
+
     if (isInsideRegion) {
       // Курсор внутри региона - начинаем с текущей позиции
-      wavesurfer.play();
+      wavesurfer.play(current, actualEnd);
     } else {
-      // Курсор вне региона - переходим к началу региона
-      // Сначала останавливаем воспроизведение
-      wavesurfer.pause();
-      
-      // Выполняем переход к началу региона
-      wavesurfer.seekTo(actualStart / totalDuration);
-      
-      // Используем setTimeout для гарантии, что seekTo завершился
-      setTimeout(() => {
-        wavesurfer.play();
-      }, 100);
+      // Курсор вне региона - начинаем с начала региона
+      wavesurfer.play(actualStart, actualEnd);
     }
   };
 
@@ -320,8 +343,8 @@ const Player = () => {
   //   [wavesurfer]
   // );
 
-const handleZoom = useCallback(
-    throttle((e) => {
+  const handleZoom = useMemo(
+    () => throttle((e) => {
       const minPxPerSec = e.target.valueAsNumber;
       if (wavesurfer) {
         wavesurfer.zoom(minPxPerSec);
@@ -329,6 +352,12 @@ const handleZoom = useCallback(
     }, 50), // Задержка 50мс для плавности
     [wavesurfer]
   );
+
+  useEffect(() => {
+    return () => {
+      handleZoom.cancel();
+    };
+  }, [handleZoom]);
 
   const resetZoom = () => {
     if (wavesurfer) {
@@ -349,9 +378,9 @@ const handleZoom = useCallback(
       ) : null}
 
       {error ? <div className="error">{error}</div> : null}
-      
+
       {fileURL ? (
-        <div ref={waveformRef} style={{ width: '100%' }} />
+        <div ref={waveformRef} style={{ width: "100%" }} />
       ) : (
         <p>Файл не загружен</p>
       )}
@@ -359,8 +388,19 @@ const handleZoom = useCallback(
       {!isLoading ? (
         <>
           <p>Текущее время: {formatTime(currentTime)}</p>
-          <p>Длина отрезка: {formatTime((regionRef.current ? regionRef.current.end - regionRef.current.start : end - start))}</p>
-          <p>Регион: {formatTime(regionRef.current ? regionRef.current.start : start)} - {formatTime(regionRef.current ? regionRef.current.end : end)}</p>
+          <p>
+            Длина отрезка:{" "}
+            {formatTime(
+              regionRef.current
+                ? regionRef.current.end - regionRef.current.start
+                : end - start
+            )}
+          </p>
+          <p>
+            Регион:{" "}
+            {formatTime(regionRef.current ? regionRef.current.start : start)} -{" "}
+            {formatTime(regionRef.current ? regionRef.current.end : end)}
+          </p>
           <button className="btn mr-2" onClick={onPlayPause}>
             {isPlaying ? "Pause" : "Play"}
           </button>
@@ -370,7 +410,7 @@ const handleZoom = useCallback(
           <button className="btn mr-2" onClick={resetZoom}>
             Сбросить зум
           </button>
-          <div style={{ marginTop: '10px' }}>
+          <div style={{ marginTop: "10px" }}>
             <label>Зум: {Math.round(zoomLevel)} px/sec </label>
             <input
               type="range"
@@ -379,7 +419,7 @@ const handleZoom = useCallback(
               step="0.1"
               value={zoomLevel}
               onChange={handleZoom}
-              style={{ width: '200px', marginLeft: '10px' }}
+              style={{ width: "200px", marginLeft: "10px" }}
             />
           </div>
         </>
