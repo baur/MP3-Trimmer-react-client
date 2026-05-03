@@ -8,6 +8,21 @@ import { useDispatch, useSelector } from "react-redux";
 import { useCallback } from "react";
 import throttle from "lodash/throttle";
 
+const ZOOM_MODES = {
+  smooth: {
+    label: "Плавно",
+    max: 12.5,
+  },
+  normal: {
+    label: "Средне",
+    max: 18.75,
+  },
+  fast: {
+    label: "Быстро",
+    max: 25,
+  },
+};
+
 const Player = () => {
   const dispatch = useDispatch();
   const { start, end } = useSelector((state) => state.region);
@@ -22,6 +37,9 @@ const Player = () => {
   const [error, setError] = useState(null);
 
   const [zoomLevel, setZoomLevel] = useState(0);
+  const [zoomMode, setZoomMode] = useState("normal");
+  const [isZoomLocked, setIsZoomLocked] = useState(true);
+  const zoomMax = ZOOM_MODES[zoomMode].max;
 
   const waveformRef = useRef(null);
   const regionRef = useRef(null);
@@ -29,10 +47,15 @@ const Player = () => {
   const isDraggingRef = useRef(false);
   const isPlayingRef = useRef(false);
   const shouldStopAtEndRef = useRef(false); // Флаг для контроля остановки
+  const isZoomLockedRef = useRef(true);
 
   useEffect(() => {
     reduxRegionRef.current = { start, end };
   }, [start, end]);
+
+  useEffect(() => {
+    isZoomLockedRef.current = isZoomLocked;
+  }, [isZoomLocked]);
 
   const getActualRegionBounds = useCallback(() => {
     return {
@@ -94,6 +117,25 @@ const Player = () => {
       scale: 0.1,
       maxZoom: 25,
     });
+    const zoomOnWheel = zoom.onWheel.bind(zoom);
+    const zoomOnTouchStart = zoom.onTouchStart.bind(zoom);
+    const zoomOnTouchMove = zoom.onTouchMove.bind(zoom);
+
+    zoom.onWheel = (event) => {
+      if (!isZoomLockedRef.current) {
+        zoomOnWheel(event);
+      }
+    };
+    zoom.onTouchStart = (event) => {
+      if (!isZoomLockedRef.current) {
+        zoomOnTouchStart(event);
+      }
+    };
+    zoom.onTouchMove = (event) => {
+      if (!isZoomLockedRef.current) {
+        zoomOnTouchMove(event);
+      }
+    };
 
     // Инициализация WaveSurfer
     const ws = WaveSurfer.create({
@@ -353,6 +395,17 @@ const Player = () => {
     [wavesurfer]
   );
 
+  const handleZoomModeChange = (mode) => {
+    const nextMax = ZOOM_MODES[mode].max;
+
+    setZoomMode(mode);
+
+    if (wavesurfer && zoomLevel > nextMax) {
+      wavesurfer.zoom(nextMax);
+      setZoomLevel(nextMax);
+    }
+  };
+
   useEffect(() => {
     return () => {
       handleZoom.cancel();
@@ -412,13 +465,42 @@ const Player = () => {
           </button>
           <div style={{ marginTop: "10px" }}>
             <label>Зум: {Math.round(zoomLevel)} px/sec </label>
+            <button
+              type="button"
+              className="btn mr-2"
+              onClick={() => setIsZoomLocked((locked) => !locked)}
+              style={{ marginLeft: "10px" }}
+            >
+              {isZoomLocked ? "Разблокировать зум" : "Блокировать зум"}
+            </button>
+            <div
+              className="inline-flex rounded border border-blue-500 overflow-hidden"
+              style={{ marginLeft: "10px" }}
+            >
+              {Object.entries(ZOOM_MODES).map(([mode, config]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleZoomModeChange(mode)}
+                  disabled={isZoomLocked}
+                  className={`px-3 py-1 transition ${
+                    zoomMode === mode
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  {config.label}
+                </button>
+              ))}
+            </div>
             <input
               type="range"
               min="0"
-              max="25"
+              max={zoomMax}
               step="0.1"
               value={zoomLevel}
               onChange={handleZoom}
+              disabled={isZoomLocked}
               style={{ width: "200px", marginLeft: "10px" }}
             />
           </div>
